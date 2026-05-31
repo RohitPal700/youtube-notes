@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YouTube Notes Generator</title>
+
+    <style>
+
+        body{
+            font-family: Arial;
+            background:#f4f4f4;
+            padding:50px;
+        }
+
+        .container{
+            background:white;
+            padding:30px;
+            max-width:600px;
+            margin:auto;
+            border-radius:10px;
+        }
+
+        input{
+            width:100%;
+            padding:12px;
+            margin-top:10px;
+        }
+
+        button{
+            margin-top:20px;
+            padding:12px 20px;
+            background:black;
+            color:white;
+            border:none;
+            cursor:pointer;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>YouTube Notes Generator</h1>
+
+    <form method="POST" action="/generate">
+
+        <input 
+            type="text"
+            name="youtube_url"
+            placeholder="Paste YouTube URL"
+            required
+        >
+
+        <button type="submit">
+            Generate Notes PDF
+        </button>
+
+    </form>
+
+</div>
+
+</body>
+</html>
