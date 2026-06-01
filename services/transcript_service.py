@@ -4,7 +4,9 @@ import yt_dlp
 
 
 def extract_video_id(url):
+
     regex = r"(?:v=|\/)([0-9A-Za-z_-]{11}).*"
+
     match = re.search(regex, url)
 
     if match:
@@ -14,17 +16,20 @@ def extract_video_id(url):
 
 
 def get_transcript(video_url):
+
     try:
+
         ydl_opts = {
             "quiet": True,
             "skip_download": True,
-            "writesubtitles": True,
-            "writeautomaticsub": True,
-            "subtitleslangs": ["en"],
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(video_url, download=False)
+
+            info = ydl.extract_info(
+                video_url,
+                download=False
+            )
 
             subtitles = (
                 info.get("automatic_captions")
@@ -34,12 +39,25 @@ def get_transcript(video_url):
             if not subtitles:
                 return "No transcript available."
 
-            en_subs = subtitles.get("en")
+            subtitle_url = None
 
-            if not en_subs:
+            # Find English subtitles
+            for key in subtitles:
+
+                if "en" in key.lower():
+
+                    subtitle_list = subtitles[key]
+
+                    if (
+                        subtitle_list
+                        and "url" in subtitle_list[0]
+                    ):
+
+                        subtitle_url = subtitle_list[0]["url"]
+                        break
+
+            if not subtitle_url:
                 return "English transcript not available."
-
-            subtitle_url = en_subs[0]["url"]
 
             response = requests.get(subtitle_url)
 
@@ -49,9 +67,25 @@ def get_transcript(video_url):
             transcript_xml = response.text
 
             # Remove XML tags
-            clean_text = re.sub(r"<.*?>", "", transcript_xml)
+            clean_text = re.sub(
+                r"<.*?>",
+                " ",
+                transcript_xml
+            )
+
+            # Remove extra spaces
+            clean_text = re.sub(
+                r"\s+",
+                " ",
+                clean_text
+            )
+
+            # Remove very short transcript
+            if len(clean_text.strip()) < 50:
+                return "Transcript too short."
 
             return clean_text
 
     except Exception as e:
+
         return f"Transcript Error: {str(e)}"

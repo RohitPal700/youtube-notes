@@ -1,4 +1,10 @@
-from flask import Flask, render_template, request, send_file
+from flask import (
+    Flask,
+    render_template,
+    request,
+    send_file
+)
+
 from dotenv import load_dotenv
 import os
 
@@ -17,6 +23,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
+
     return render_template('index.html')
 
 
@@ -26,10 +33,12 @@ def generate():
     youtube_url = request.form['youtube_url']
 
     try:
-        # Extract Video ID
+
+        # Validate URL
         video_id = extract_video_id(youtube_url)
 
         if not video_id:
+
             return render_template(
                 'index.html',
                 error="Invalid YouTube URL."
@@ -38,17 +47,24 @@ def generate():
         # Get Transcript
         transcript = get_transcript(youtube_url)
 
-        # Handle Transcript Errors
+        print(transcript[:1000])
+
+        # Handle transcript errors
         if (
             "Error" in transcript
             or "No transcript" in transcript
             or "not available" in transcript
             or "Failed" in transcript
+            or "too short" in transcript
         ):
+
             return render_template(
                 'index.html',
                 error=transcript
             )
+
+        # Limit transcript size
+        transcript = transcript[:12000]
 
         # Generate AI Notes
         notes = generate_notes(transcript)
@@ -62,6 +78,7 @@ def generate():
         )
 
     except Exception as e:
+
         return render_template(
             'index.html',
             error=f"Error: {str(e)}"
