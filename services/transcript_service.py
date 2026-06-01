@@ -1,27 +1,25 @@
-from youtube_transcript_api import YouTubeTranscriptApi
-import re
+import yt_dlp
 
-def extract_video_id(url):
+def get_transcript(video_url):
+    ydl_opts = {
+        "skip_download": True,
+        "writesubtitles": True,
+        "writeautomaticsub": True,
+        "subtitleslangs": ["en"],
+        "quiet": True
+    }
 
-    pattern = r"(?:v=|\/)([0-9A-Za-z_-]{11}).*"
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(video_url, download=False)
 
-    match = re.search(pattern, url)
+        subtitles = info.get("automatic_captions") or info.get("subtitles")
 
-    if match:
-        return match.group(1)
+        if not subtitles:
+            return "No transcript available"
 
-    raise Exception("Invalid YouTube URL")
+        en_subs = subtitles.get("en")
 
+        if not en_subs:
+            return "English transcript not available"
 
-def get_transcript(video_id):
-
-    api = YouTubeTranscriptApi()
-
-    transcript = api.fetch(video_id, languages=['en-IN', 'en', 'hi'])
-
-    full_text = ""
-
-    for entry in transcript:
-        full_text += entry.text + " "
-
-    return full_text
+        return en_subs[0]["url"]
