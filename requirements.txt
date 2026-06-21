@@ -15,4 +15,4 @@ groq
 python-dotenv
 fpdf2
 youtube-transcript-api
-pip freeze > requirements.txtgoogle-generativeai==0.8.6
+google-generativeai==0.8.6
