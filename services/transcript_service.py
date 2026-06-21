@@ -1,16 +1,11 @@
 import re
-import os
 import logging
 from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api.proxies import WebshareProxyConfig
 from dotenv import load_dotenv
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-
-WEBSHARE_USERNAME = os.getenv("WEBSHARE_USERNAME", "")
-WEBSHARE_PASSWORD = os.getenv("WEBSHARE_PASSWORD", "")
 
 _ERR_INVALID_URL = "ERROR: Invalid YouTube URL. Please check the link and try again."
 _ERR_SHORT       = "ERROR: This video has no usable transcript."
@@ -18,28 +13,9 @@ _ERR_UNAVAILABLE = "ERROR: Unable to retrieve the transcript. Please try again l
 
 
 def _get_api() -> YouTubeTranscriptApi:
-    """
-    Returns a YouTubeTranscriptApi instance with WebshareProxyConfig when
-    credentials are present. WebshareProxyConfig handles URL encoding of
-    special characters internally — no manual quote() needed.
-    Falls back to direct connection for local development.
-    """
-    def _get_api() -> YouTubeTranscriptApi:
-
-     logger.info(
-        "Webshare creds loaded: user='%s' pass_len=%d",
-        WEBSHARE_USERNAME,
-        len(WEBSHARE_PASSWORD) if WEBSHARE_PASSWORD else 0
-    )
-
-    if WEBSHARE_USERNAME and WEBSHARE_PASSWORD:
-        proxy_config = WebshareProxyConfig(
-            proxy_username=WEBSHARE_USERNAME,
-            proxy_password=WEBSHARE_PASSWORD,
-        )
-        return YouTubeTranscriptApi(proxy_config=proxy_config)
-
+    """Direct connection — no proxy. For testing on Render before adding residential proxy."""
     return YouTubeTranscriptApi()
+
 
 def extract_video_id(url: str):
     patterns = [
@@ -78,6 +54,5 @@ def get_transcript(video_url: str) -> str:
         return text
 
     except Exception as e:
-        # Log full error server-side only — never expose to client
         logger.error("Transcript fetch failed for %s: %s", video_url, str(e))
         return _ERR_UNAVAILABLE
