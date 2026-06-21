@@ -1,26 +1,27 @@
 import re
 import logging
-import google.generativeai as genai
-from google.api_core.exceptions import ResourceExhausted, GoogleAPIError
-from dotenv import load_dotenv
 import os
+from google import genai
+from google.genai import types
+from google.genai.errors import APIError
+from dotenv import load_dotenv
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# New SDK: use a Client instance, not genai.configure()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 MODEL = "gemini-2.5-flash"  # swap to "gemini-2.5-pro" for higher quality
 
 CHUNK_SIZE = 30000   # ~7-8K tokens per chunk, well within Gemini's 1M context
 MAX_CHUNKS = 12      # covers ~3-4 hour videos
 
-# User-facing messages — no internal details exposed
-_ERR_SHORT        = "ERROR: This video's transcript is too short to generate notes."
-_ERR_EMPTY        = "ERROR: Unable to generate notes. Please try again later."
-_ERR_RATE_LIMIT   = "ERROR: The service is temporarily busy. Please try again in a few minutes."
-_ERR_AI_GENERIC   = "ERROR: Unable to process the video. Please try again later."
+_ERR_SHORT      = "ERROR: This video's transcript is too short to generate notes."
+_ERR_EMPTY      = "ERROR: Unable to generate notes. Please try again later."
+_ERR_RATE_LIMIT = "ERROR: The service is temporarily busy. Please try again in a few minutes."
+_ERR_AI_GENERIC = "ERROR: Unable to process the video. Please try again later."
 
 FORMAT_RULES = """
 Format the output using EXACTLY this markdown style (this is required, not optional,
@@ -37,10 +38,7 @@ because the output is rendered into a styled PDF):
 
 def _split_into_chunks(transcript, chunk_size=CHUNK_SIZE):
     """Split on whitespace near chunk_size so we never cut a word in half."""
-    chunks = []
-    start = 0
-    length = len(transcript)
-
+    chunks, start, length = [], 0, len(transcript)
     while start < length:
         end = min(start + chunk_size, length)
         if end < length:
@@ -49,16 +47,15 @@ def _split_into_chunks(transcript, chunk_size=CHUNK_SIZE):
                 end = space
         chunks.append(transcript[start:end].strip())
         start = end
-
     return [c for c in chunks if c]
 
 
 def _call_gemini(prompt: str, max_output_tokens: int) -> tuple[str, str]:
-    """Single Gemini call. Returns (text, finish_reason)."""
-    model = genai.GenerativeModel(MODEL)
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.types.GenerationConfig(
+    """Single Gemini API call using the new google-genai SDK. Returns (text, finish_reason)."""
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
             temperature=0.3,
             max_output_tokens=max_output_tokens,
         ),
@@ -145,8 +142,7 @@ def generate_notes(transcript: str) -> str:
             for i, chunk in enumerate(chunks, start=1):
                 part_notes = _summarize_chunk(chunk, i, total)
                 raw_parts.append(f"--- Part {i} ---\n{part_notes}")
-            combined_raw = "\n\n".join(raw_parts)
-            notes, finish_reason = _synthesize_final_notes(combined_raw)
+            notes, finish_reason = _synthesize_final_notes("\n\n".join(raw_parts))
 
         if not notes or not notes.strip():
             logger.error("Gemini returned empty response")
@@ -167,12 +163,11 @@ def generate_notes(transcript: str) -> str:
 
         return notes
 
-    except ResourceExhausted as e:
-        logger.warning("Gemini rate limit hit: %s", str(e))
-        return _ERR_RATE_LIMIT
-
-    except GoogleAPIError as e:
-        logger.error("Gemini API error: %s", str(e))
+    except APIError as e:
+        if e.code == 429:
+            logger.warning("Gemini rate limit: %s", str(e))
+            return _ERR_RATE_LIMIT
+        logger.error("Gemini API error %s: %s", e.code, str(e))
         return _ERR_AI_GENERIC
 
     except Exception as e:

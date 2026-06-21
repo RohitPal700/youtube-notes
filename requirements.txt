@@ -16,3 +16,9 @@ python-dotenv
 fpdf2
 youtube-transcript-api
 google-generativeai==0.8.6
+flask
+gunicorn
+python-dotenv
+youtube-transcript-api
+fpdf2
+google-genai
