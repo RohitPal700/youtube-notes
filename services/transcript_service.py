@@ -24,6 +24,14 @@ def _get_api() -> YouTubeTranscriptApi:
     special characters internally — no manual quote() needed.
     Falls back to direct connection for local development.
     """
+    def _get_api() -> YouTubeTranscriptApi:
+
+     logger.info(
+        "Webshare creds loaded: user='%s' pass_len=%d",
+        WEBSHARE_USERNAME,
+        len(WEBSHARE_PASSWORD) if WEBSHARE_PASSWORD else 0
+    )
+
     if WEBSHARE_USERNAME and WEBSHARE_PASSWORD:
         proxy_config = WebshareProxyConfig(
             proxy_username=WEBSHARE_USERNAME,
@@ -32,7 +40,6 @@ def _get_api() -> YouTubeTranscriptApi:
         return YouTubeTranscriptApi(proxy_config=proxy_config)
 
     return YouTubeTranscriptApi()
-
 
 def extract_video_id(url: str):
     patterns = [
