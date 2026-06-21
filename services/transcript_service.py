@@ -1,16 +1,19 @@
 import re
-import requests
-import yt_dlp
+from youtube_transcript_api import YouTubeTranscriptApi
 
 
 def extract_video_id(url):
 
-    regex = r"(?:v=|\/)([0-9A-Za-z_-]{11}).*"
+    patterns = [
+        r"v=([a-zA-Z0-9_-]{11})",
+        r"youtu\.be\/([a-zA-Z0-9_-]{11})"
+    ]
 
-    match = re.search(regex, url)
+    for pattern in patterns:
+        match = re.search(pattern, url)
 
-    if match:
-        return match.group(1)
+        if match:
+            return match.group(1)
 
     return None
 
@@ -19,73 +22,49 @@ def get_transcript(video_url):
 
     try:
 
-        ydl_opts = {
-            "quiet": True,
-            "skip_download": True,
-        }
+        video_id = extract_video_id(video_url)
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        if not video_id:
+            return "ERROR: Invalid YouTube URL"
 
-            info = ydl.extract_info(
-                video_url,
-                download=False
-            )
+        # Preferred languages, in order. If none of these are
+        # available we fall back to whatever language the video
+        # actually has (many videos only have auto-generated
+        # transcripts in their original language, e.g. Hindi).
+        preferred_languages = ["en", "en-US", "en-GB", "hi"]
 
-            subtitles = (
-                info.get("automatic_captions")
-                or info.get("subtitles")
-            )
+        # youtube-transcript-api >= 1.0 replaced the old static
+        # YouTubeTranscriptApi.get_transcript(video_id) with an
+        # instance method: YouTubeTranscriptApi().fetch(video_id).
+        # Support both so this works regardless of installed version.
+        if hasattr(YouTubeTranscriptApi, "get_transcript"):
+            try:
+                transcript = YouTubeTranscriptApi.get_transcript(
+                    video_id, languages=preferred_languages
+                )
+            except Exception:
+                # Fall back to the first available transcript,
+                # whatever language it's in.
+                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                first_transcript = next(iter(transcript_list))
+                transcript = first_transcript.fetch()
+            text = " ".join(item["text"] for item in transcript)
+        else:
+            api = YouTubeTranscriptApi()
+            try:
+                fetched = api.fetch(video_id, languages=preferred_languages)
+            except Exception:
+                transcript_list = api.list(video_id)
+                first_transcript = next(iter(transcript_list))
+                fetched = first_transcript.fetch()
+            text = " ".join(snippet.text for snippet in fetched)
 
-            if not subtitles:
-                return "No transcript available."
+        if len(text.strip()) < 50:
+            return "ERROR: Transcript too short"
 
-            subtitle_url = None
-
-            # Find English subtitles
-            for key in subtitles:
-
-                if "en" in key.lower():
-
-                    subtitle_list = subtitles[key]
-
-                    if (
-                        subtitle_list
-                        and "url" in subtitle_list[0]
-                    ):
-
-                        subtitle_url = subtitle_list[0]["url"]
-                        break
-
-            if not subtitle_url:
-                return "English transcript not available."
-
-            response = requests.get(subtitle_url)
-
-            if response.status_code != 200:
-                return "Failed to download transcript."
-
-            transcript_xml = response.text
-
-            # Remove XML tags
-            clean_text = re.sub(
-                r"<.*?>",
-                " ",
-                transcript_xml
-            )
-
-            # Remove extra spaces
-            clean_text = re.sub(
-                r"\s+",
-                " ",
-                clean_text
-            )
-
-            # Remove very short transcript
-            if len(clean_text.strip()) < 50:
-                return "Transcript too short."
-
-            return clean_text
+        return text
 
     except Exception as e:
 
-        return f"Transcript Error: {str(e)}"
+        print("Transcript Error:", str(e))
+        return f"ERROR: {str(e)}"

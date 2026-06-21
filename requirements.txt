@@ -10,3 +10,8 @@ youtube-transcript-api==1.2.4
 fpdf2==2.8.7
 beautifulsoup4==4.14.3
 lxml==6.0.2
+flask
+groq
+python-dotenv
+fpdf2
+youtube-transcript-api

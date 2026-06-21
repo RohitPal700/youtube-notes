@@ -1,65 +1,412 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>YouTube Notes Generator</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notesreel — Turn any video into notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
 
-    <style>
+  :root{
+    --paper:#FAF7F1;
+    --ink:#1C1A17;
+    --ink-soft:#5C564C;
+    --line:#E4DDD0;
+    --amber:#C2700B;
+    --amber-deep:#9A5808;
+    --teal:#1F5F58;
+    --error-bg:#FBEAE6;
+    --error-text:#9A3412;
+    --card:#FFFFFF;
+  }
 
-        body{
-            font-family: Arial;
-            background:#f4f4f4;
-            padding:50px;
-        }
+  *{ box-sizing:border-box; }
 
-        .container{
-            background:white;
-            padding:30px;
-            max-width:600px;
-            margin:auto;
-            border-radius:10px;
-        }
+  html{ -webkit-font-smoothing:antialiased; }
 
-        input{
-            width:100%;
-            padding:12px;
-            margin-top:10px;
-        }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:32px 20px;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(28,26,23,0.06) 1px, transparent 0);
+    background-size: 28px 28px;
+  }
 
-        button{
-            margin-top:20px;
-            padding:12px 20px;
-            background:black;
-            color:white;
-            border:none;
-            cursor:pointer;
-        }
+  .shell{
+    width:100%;
+    max-width:920px;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow: 0 1px 2px rgba(28,26,23,0.04), 0 24px 60px -28px rgba(28,26,23,0.25);
+    display:grid;
+    grid-template-columns: 1fr;
+  }
 
-    </style>
+  @media (min-width: 760px){
+    .shell{ grid-template-columns: 0.92fr 1.08fr; }
+  }
 
+  /* ---------- Left: signature panel ---------- */
+
+  .signature{
+    background: linear-gradient(180deg, #1C1A17 0%, #262220 100%);
+    color:#F3EFE6;
+    padding:40px 36px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    position:relative;
+    overflow:hidden;
+  }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:#C9A36A;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .eyebrow::before{
+    content:"";
+    width:6px; height:6px;
+    border-radius:50%;
+    background:var(--amber);
+    display:inline-block;
+  }
+
+  .sig-title{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:clamp(28px, 3.4vw, 36px);
+    line-height:1.12;
+    margin:18px 0 14px;
+    letter-spacing:-0.01em;
+  }
+
+  .sig-title em{
+    font-style:italic;
+    color:var(--amber);
+  }
+
+  .sig-sub{
+    font-size:14px;
+    line-height:1.6;
+    color:#C9C3B6;
+    max-width:34ch;
+  }
+
+  .transform{
+    margin-top:36px;
+    display:flex;
+    align-items:center;
+    gap:0;
+  }
+
+  .wave{
+    display:flex;
+    align-items:flex-end;
+    gap:3px;
+    height:36px;
+  }
+
+  .wave span{
+    width:3px;
+    background:#7A7468;
+    border-radius:2px;
+    animation: bob 2.4s ease-in-out infinite;
+  }
+
+  .wave span:nth-child(1){ height:14px; animation-delay:0s; }
+  .wave span:nth-child(2){ height:28px; animation-delay:.15s; }
+  .wave span:nth-child(3){ height:10px; animation-delay:.3s; }
+  .wave span:nth-child(4){ height:34px; animation-delay:.45s; }
+  .wave span:nth-child(5){ height:18px; animation-delay:.6s; }
+  .wave span:nth-child(6){ height:26px; animation-delay:.75s; }
+  .wave span:nth-child(7){ height:12px; animation-delay:.9s; }
+
+  @keyframes bob{
+    0%, 100%{ transform:scaleY(0.6); opacity:.55; }
+    50%{ transform:scaleY(1); opacity:1; }
+  }
+
+  .arrow{
+    color:var(--amber);
+    font-size:18px;
+    margin:0 14px;
+    flex-shrink:0;
+  }
+
+  .notelines{
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+    flex:1;
+  }
+
+  .notelines i{
+    display:block;
+    height:6px;
+    border-radius:3px;
+    background:#494339;
+  }
+
+  .notelines i:nth-child(1){ width:88%; background:#C9A36A; }
+  .notelines i:nth-child(2){ width:62%; }
+  .notelines i:nth-child(3){ width:74%; }
+
+  .sig-foot{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:#857E70;
+    margin-top:40px;
+    padding-top:18px;
+    border-top:1px solid rgba(255,255,255,0.08);
+  }
+
+  /* ---------- Right: form panel ---------- */
+
+  .form-panel{
+    padding:40px 36px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+  }
+
+  .form-title{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:22px;
+    margin:0 0 6px;
+  }
+
+  .form-desc{
+    font-size:14px;
+    color:var(--ink-soft);
+    margin:0 0 26px;
+    line-height:1.55;
+  }
+
+  .field-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--ink-soft);
+    display:block;
+    margin-bottom:8px;
+  }
+
+  .input-row{ position:relative; }
+
+  input[type="text"]{
+    width:100%;
+    padding:14px 16px;
+    font-size:15px;
+    font-family:'Inter', sans-serif;
+    color:var(--ink);
+    background:var(--paper);
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    outline:none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+
+  input[type="text"]::placeholder{ color:#A39C8E; }
+
+  input[type="text"]:focus{
+    border-color:var(--amber);
+    box-shadow: 0 0 0 4px rgba(194,112,11,0.12);
+  }
+
+  button{
+    width:100%;
+    margin-top:16px;
+    padding:14px 20px;
+    font-family:'Inter', sans-serif;
+    font-size:15px;
+    font-weight:600;
+    color:#FFF6EA;
+    background:var(--amber);
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    transition: background .15s ease, transform .1s ease;
+  }
+
+  button:hover{ background:var(--amber-deep); }
+  button:active{ transform: translateY(1px); }
+
+  button:disabled{
+    background:#D8CFBF;
+    color:#8A8273;
+    cursor:not-allowed;
+  }
+
+  .spinner{
+    width:16px; height:16px;
+    border-radius:50%;
+    border:2px solid rgba(255,246,234,0.4);
+    border-top-color:#FFF6EA;
+    display:none;
+    animation: spin .7s linear infinite;
+  }
+
+  button:disabled .spinner{ display:inline-block; }
+
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .loading{
+    display:none;
+    align-items:center;
+    gap:8px;
+    margin-top:14px;
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+
+  .loading.active{ display:flex; }
+
+  .loading .dots span{ animation: pulse 1.2s infinite; }
+  .loading .dots span:nth-child(2){ animation-delay:.2s; }
+  .loading .dots span:nth-child(3){ animation-delay:.4s; }
+
+  @keyframes pulse{
+    0%, 60%, 100%{ opacity:.25; }
+    30%{ opacity:1; }
+  }
+
+  .error{
+    margin-top:16px;
+    padding:12px 14px;
+    background:var(--error-bg);
+    color:var(--error-text);
+    border-radius:10px;
+    font-size:13.5px;
+    line-height:1.5;
+    border:1px solid rgba(154,52,18,0.15);
+  }
+
+  .meta-row{
+    display:flex;
+    gap:18px;
+    margin-top:24px;
+    padding-top:20px;
+    border-top:1px solid var(--line);
+  }
+
+  .meta-item{
+    font-size:12px;
+    color:var(--ink-soft);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+
+  .meta-item b{ color:var(--ink); font-weight:600; }
+
+  @media (prefers-reduced-motion: reduce){
+    .wave span, .spinner, .loading .dots span{ animation:none !important; }
+  }
+
+</style>
 </head>
 
 <body>
 
-<div class="container">
+<div class="shell">
 
-    <h1>YouTube Notes Generator</h1>
+  <div class="signature">
+    <div>
+      <span class="eyebrow">Notesreel</span>
+      <h1 class="sig-title">Watch less.<br>Read <em>just</em> the notes.</h1>
+      <p class="sig-sub">Paste a link. We pull the transcript, distill it into clean study notes, and hand you a PDF — no scrubbing through 40 minutes of video.</p>
+    </div>
 
-    <form method="POST" action="/generate">
+    <div>
+      <div class="transform">
+        <div class="wave">
+          <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <span class="arrow">&#8594;</span>
+        <div class="notelines">
+          <i></i><i></i><i></i>
+        </div>
+      </div>
+      <div class="sig-foot">transcript.txt &#8594; notes.pdf</div>
+    </div>
+  </div>
 
-        <input 
-            type="text"
-            name="youtube_url"
-            placeholder="Paste YouTube URL"
-            required
+  <div class="form-panel">
+
+    <h2 class="form-title">Generate your notes</h2>
+    <p class="form-desc">Works on any video with captions — auto-generated ones included.</p>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/generate" id="generate-form">
+
+      <label class="field-label" for="youtube_url">YouTube URL</label>
+      <div class="input-row">
+        <input
+          type="text"
+          id="youtube_url"
+          name="youtube_url"
+          placeholder="https://www.youtube.com/watch?v=..."
+          required
         >
+      </div>
 
-        <button type="submit">
-            Generate Notes PDF
-        </button>
+      <button type="submit" id="submit-btn">
+        <span class="spinner"></span>
+        <span id="btn-label">Generate notes PDF</span>
+      </button>
+
+      <div class="loading" id="loading-msg">
+        <span>Reading transcript and writing notes</span>
+        <span class="dots"><span>.</span><span>.</span><span>.</span></span>
+      </div>
 
     </form>
 
+    <div class="meta-row">
+      <div class="meta-item"><b>~30–60s</b>&nbsp;per video</div>
+      <div class="meta-item"><b>PDF</b>&nbsp;output</div>
+      <div class="meta-item"><b>Any</b>&nbsp;caption language</div>
+    </div>
+
+  </div>
+
 </div>
+
+<script>
+  document.getElementById('generate-form').addEventListener('submit', function () {
+    var btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    document.getElementById('btn-label').textContent = 'Generating...';
+    document.getElementById('loading-msg').classList.add('active');
+  });
+</script>
 
 </body>
 </html>
